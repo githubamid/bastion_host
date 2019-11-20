@@ -1,12 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: 'VPC: public, private, db subnets in three availability zones'
+Description: 'Bastion Host in AutoSG with two subnet'
 #-------------------------------Parameters----------------------------------
 Parameters:
   EnvironmentName:
     Description: An environment name that will be prefixed to resource names
     Type: String
 
-          #-------- Parameters for VPC -------------
+          #--------  For VPC -------------
 
   VpcCIDR:
     Description: IP range for this VPC
@@ -23,6 +23,13 @@ Parameters:
     Type: String
     Default: 10.1.21.0/24
 
+        #--------  For EC2 -------------
+
+  LatestAMIid:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+
 #-------------------------------Resources----------------------------------
 
 Resources:
@@ -35,7 +42,7 @@ Resources:
       InstanceTenancy: default
       Tags:
       - Key: Name
-        Value: !Ref EnvironmentName
+        Value: !Join ['', [!Ref EnvironmentName, -VPC ]]
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -106,4 +113,12 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnetB
 
-    
+#-------------------------------Resources----------------------------------
+Outputs:
+  Region:
+    Description: "Current Region"
+    Value:
+      Ref: "AWS::Region"
+  LastAMI:
+   Description: "Last Amazon AMI"
+   Value: !Ref LatestAMIid
