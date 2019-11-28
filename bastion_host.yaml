@@ -65,6 +65,34 @@ Parameters:
   #InstanceSecurityGroup:
   #  Description: List of Security Group IDs
   #  Type: List<AWS::EC2::SecurityGroup::Id>
+#-------------------------------Metadata----------------------------------
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Environment"
+      Parameters:
+      - EnvironmentName
+    - Label:
+        default: "Network Configuration"
+      Parameters:
+      - VpcCIDR
+      - PublicSubnetAcidr
+      - PublicSubnetBcidr
+    - Label:
+        default: "AutoScalingGroup Configuration"
+      Parameters:
+      - MaxSizeASG
+      - MinSizeASG
+      - DesiredCapacityASG
+    - Label:
+        default: "BastionHost Configuration"
+      Parameters:
+      - InstanceType
+      - LatestAMIid
+      - KeyName
+      - SSHLocation
 
 #-------------------------------Resources----------------------------------
 
@@ -94,8 +122,8 @@ Resources:
       VpcId: !Ref VPC
 
   BHSecurityGroup:
-   Type: 'AWS::EC2::SecurityGroup'
-   Properties:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
      VpcId: !Ref VPC
      GroupDescription: Enable SSH access via port 22
      SecurityGroupIngress:
@@ -159,31 +187,43 @@ Resources:
       SubnetId: !Ref PublicSubnetB
 
       #------------------AutoScaling-------------------------------
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
+
   AutoSGLaunchCF:
-      Type: AWS::AutoScaling::LaunchConfiguration
-      Properties:
-        KeyName: !Ref KeyName
-        ImageId: !Ref LatestAMIid
-        SecurityGroups:
-              - !Ref BHSecurityGroup
-        InstanceType: !Ref InstanceType
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: !Ref LatestAMIid
+      UserData:
+        Fn::Base64:                                # YAML makes userdata much cleaner
+          !Sub |
+              #!/bin/bash
+              sudo yum -y update
+              sudo yum install -y httpd
+              echo "Hello" > /home/ec2-user/hi.txt
+      SecurityGroups:
+        - !Ref BHSecurityGroup
+      InstanceType: !Ref InstanceType
 #        LaunchConfigurationName: AutoSGLaunchCF
 
   AutoScalingGroup:
-      Type: AWS::AutoScaling::AutoScalingGroup
-      Properties:
-        AutoScalingGroupName: AutoSG for BastionHost
-        Cooldown: 120
-        DesiredCapacity: !Ref DesiredCapacityASG
-        LaunchConfigurationName: !Ref AutoSGLaunchCF
-        MaxSize: !Ref MaxSizeASG
-        MinSize: !Ref MinSizeASG
-        Tags:
-          -
-            Key: Name
-            Value: ASGBastionHost
-            PropagateAtLaunch: 'true'
-        VPCZoneIdentifier:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: AutoSG for BastionHost
+      Cooldown: 120
+      DesiredCapacity: !Ref DesiredCapacityASG
+      LaunchConfigurationName: !Ref AutoSGLaunchCF
+      MaxSize: !Ref MaxSizeASG
+      MinSize: !Ref MinSizeASG
+      Tags:
+        -
+          Key: Name
+          Value: BastionHostASG
+          PropagateAtLaunch: 'true'
+      VPCZoneIdentifier:
               - !Ref PublicSubnetA
               - !Ref PublicSubnetB
 
