@@ -186,7 +186,43 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnetB
 
-      #------------------AutoScaling-------------------------------
+   #------------------IAM ROLE-------------------------------
+  EC2Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+  Ec2Policie:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "EC2Police"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "ec2:AssociateAddress"
+              - "ec2:DisassociateAddress"
+            Resource: "*"
+      Roles:
+        - !Ref EC2Role
+  EC2Profile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref EC2Role
+  #------------------AutoScaling-------------------------------
   EIP:
     Type: AWS::EC2::EIP
     Properties:
@@ -203,9 +239,14 @@ Resources:
               #!/bin/bash
               sudo yum -y update
               sudo yum install -y httpd
-              echo "Hello" > /home/ec2-user/hi.txt
+              INSTANCE_ID=`/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id`
+
+              aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id !GetAtt EIP.AllocationId
+              echo $INSTANCE_ID > /home/ec2-user/hi.txt
+
       SecurityGroups:
         - !Ref BHSecurityGroup
+      IamInstanceProfile: !Ref EC2Profile
       InstanceType: !Ref InstanceType
 #        LaunchConfigurationName: AutoSGLaunchCF
 
@@ -240,3 +281,6 @@ Outputs:
   VPC:
    Description: "Current VPC"
    Value: !Ref VPC
+  EIP:
+   Description: "Allocation Id"
+   Value: !GetAtt EIP.AllocationId
