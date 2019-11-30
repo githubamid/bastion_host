@@ -240,10 +240,7 @@ Resources:
               sudo yum -y update
               sudo yum install -y httpd
               INSTANCE_ID=`/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id`
-
-              aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id !GetAtt EIP.AllocationId
-              echo $INSTANCE_ID > /home/ec2-user/hi.txt
-
+              aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id ${EIP.AllocationId} --region ${AWS::Region}
       SecurityGroups:
         - !Ref BHSecurityGroup
       IamInstanceProfile: !Ref EC2Profile
@@ -273,8 +270,7 @@ Resources:
 Outputs:
   Region:
     Description: "Current Region"
-    Value:
-      Ref: "AWS::Region"
+    Value: !Ref "AWS::Region"
   LastAMI:
    Description: "Last Amazon AMI"
    Value: !Ref LatestAMIid
