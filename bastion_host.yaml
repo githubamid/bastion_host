@@ -8,20 +8,30 @@ Parameters:
 
           #--------  For VPC -------------
 
-  VpcCIDR:
-    Description: IP range for this VPC
-    Type: String
-    Default: 10.1.0.0/16
+#  VpcCIDR:
+#    Description: IP range for this VPC
+#    Type: String
+#    Default: 10.1.0.0/16
 
-  PublicSubnetAcidr:
-    Description:  IP range  for the public subnet A
-    Type: String
-    Default: 10.1.11.0/24
+  VPC:
+   Description:  VPC list for the Region
+   Type: 'AWS::EC2::VPC::Id'
+   ConstraintDescription: must be the name of an existing VPC.
 
-  PublicSubnetBcidr:
-    Description:  IP range  for the public subnet B
-    Type: String
-    Default: 10.1.21.0/24
+  Subnets:
+   Description:  Subnet list for the VPC
+   Type: 'List<AWS::EC2::Subnet::Id>'
+   ConstraintDescription: must be the name of an existing Subnet.
+
+#  PublicSubnetAcidr:
+#    Description:  IP range  for the public subnet A
+#    Type: String
+#    Default: 10.1.11.0/24
+
+#  PublicSubnetBcidr:
+#    Description:  IP range  for the public subnet B
+#    Type: String
+#    Default: 10.1.21.0/24
 
         #--------  For AutoSG -------------
 
@@ -29,18 +39,18 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 
-  MaxSizeASG:
-    Description: Enter the Max Size for the ASG
-    Type: String
-    Default: 1
-  MinSizeASG:
-    Description: Enter the Min Size for the ASG
-    Type: String
-    Default: 1
-  DesiredCapacityASG:
-    Description: Enter the desired capacity for the ASG
-    Type: String
-    Default: 1
+#  MaxSizeASG:
+#    Description: Enter the Max Size for the ASG
+#    Type: String
+#    Default: 1
+#  MinSizeASG:
+#    Description: Enter the Min Size for the ASG
+#    Type: String
+#    Default: 1
+#  DesiredCapacityASG:
+#    Description: Enter the desired capacity for the ASG
+#    Type: String
+#    Default: 1
 #  VPCZoneIdentifier:
 #    Description: List the Subnet Ids of the instances
 #    Type: List<AWS::EC2::Subnet::Id>
@@ -50,17 +60,19 @@ Parameters:
   InstanceType:
     Description: EC2 instance type
     Type: String
-    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - m1.small
+      - m1.large
+    Description: Enter t2.micro, m1.small, or m1.large. Default is t2.micro.
 
           #--------  SecurityGroup -------------
-  SSHLocation:
-    Description: The IP address range that can be used to SSH to the EC2 instances
-    Type: String
-    MinLength: '9'
-    MaxLength: '18'
-    Default: 0.0.0.0/0
-    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+#  SSHLocation:
+#    Description: The IP address range that can be used to SSH to the EC2 instances
+#    MinLength: '9'
+#    MaxLength: '18'
+#    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+#    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
   #InstanceSecurityGroup:
   #  Description: List of Security Group IDs
@@ -77,49 +89,46 @@ Metadata:
     - Label:
         default: "Network Configuration"
       Parameters:
-      - VpcCIDR
-      - PublicSubnetAcidr
-      - PublicSubnetBcidr
-    - Label:
-        default: "AutoScalingGroup Configuration"
-      Parameters:
-      - MaxSizeASG
-      - MinSizeASG
-      - DesiredCapacityASG
+      - VPC
+      - Subnets
+#    - Label:
+#        default: "AutoScalingGroup Configuration"
+#      Parameters:
+#      - MinSizeASG
+#      - DesiredCapacityASG
     - Label:
         default: "BastionHost Configuration"
       Parameters:
       - InstanceType
-      - LatestAMIid
       - KeyName
-      - SSHLocation
+      - LatestAMIid
 
 #-------------------------------Resources----------------------------------
 
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: !Ref VpcCIDR
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-      InstanceTenancy: default
-      Tags:
-      - Key: Name
-        Value: !Join ['', [!Ref EnvironmentName, -VPC ]]
+  # VPC:
+  #   Type: AWS::EC2::VPC
+  #   Properties:
+  #     CidrBlock: !Ref VPCList
+  #     EnableDnsSupport: true
+  #     EnableDnsHostnames: true
+  #     InstanceTenancy: default
+  #     Tags:
+  #     - Key: Name
+  #       Value: !Join ['', [!Ref EnvironmentName, -VPC ]]
 
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Join ['', [!Ref EnvironmentName, -IGW ]]
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
+  # InternetGateway:
+  #   Type: AWS::EC2::InternetGateway
+  #   Properties:
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Join ['', [!Ref EnvironmentName, -IGW ]]
+  #
+  # InternetGatewayAttachment:
+  #   Type: AWS::EC2::VPCGatewayAttachment
+  #   Properties:
+  #     InternetGatewayId: !Ref InternetGateway
+  #     VpcId: !Ref VPC
 
   BHSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -130,61 +139,60 @@ Resources:
        - IpProtocol: tcp
          FromPort: '22'
          ToPort: '22'
-         CidrIp: !Ref SSHLocation
+         CidrIp: 0.0.0.0/0
 
           #--------------- Creation subnet AZ - A and B ----------------------
-  PublicSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs ]
-      CidrBlock: !Ref PublicSubnetAcidr
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Public-SubnetA
+#  PublicSubnetA:
+#    Type: AWS::EC2::Subnet
+#    Properties:
+#      VpcId: !Ref VPC
+#      AvailabilityZone: !Select [ 0, !GetAZs ]
+#      CidrBlock: !Ref PublicSubnetAcidr
+#      MapPublicIpOnLaunch: true
+#      Tags:
+#        - Key: Name
+#          Value: !Sub ${EnvironmentName}-Public-SubnetA
 
 
-  PublicSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs ]
-      CidrBlock: !Ref PublicSubnetBcidr
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Public-SubnetB
+#  PublicSubnetB:
+#    Type: AWS::EC2::Subnet
+#    Properties:
+#      VpcId: !Ref VPC
+#      AvailabilityZone: !Select [ 1, !GetAZs ]
+#      CidrBlock: !Ref PublicSubnetBcidr
+#      MapPublicIpOnLaunch: true
+#      Tags:
+#        - Key: Name
+#          Value: !Sub ${EnvironmentName}-Public-SubnetB
 
 
       #--------------- Creat Public Route Table ----------------------
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} Public Routes
-
-  PublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PublicSubnetARouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnetA
-
-  PublicSubnetBRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnetB
+  # PublicRouteTable:
+  #   Type: AWS::EC2::RouteTable
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub ${EnvironmentName} Public Routes
+  #
+  # PublicRoute:
+  #   DependsOn: InternetGatewayAttachment
+  #   Properties:
+  #     RouteTableId: !Ref PublicRouteTable
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     GatewayId: !Ref InternetGateway
+  #
+  # PublicSubnetARouteTableAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     RouteTableId: !Ref PublicRouteTable
+  #     SubnetId: !Ref PublicSubnetA
+  #
+  # PublicSubnetBRouteTableAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     RouteTableId: !Ref PublicRouteTable
+  #     SubnetId: !Ref PublicSubnetB
 
    #------------------IAM ROLE-------------------------------
   EC2Role:
@@ -201,10 +209,10 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Path: "/"
-  Ec2Policie:
+  Ec2Policy:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: "EC2Police"
+      PolicyName: "EC2Policy"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -252,18 +260,18 @@ Resources:
     Properties:
       AutoScalingGroupName: AutoSG for BastionHost
       Cooldown: 120
-      DesiredCapacity: !Ref DesiredCapacityASG
+      DesiredCapacity: 1
       LaunchConfigurationName: !Ref AutoSGLaunchCF
-      MaxSize: !Ref MaxSizeASG
-      MinSize: !Ref MinSizeASG
+      MaxSize: 1
+      MinSize: 1
       Tags:
         -
           Key: Name
           Value: BastionHostASG
           PropagateAtLaunch: 'true'
       VPCZoneIdentifier:
-              - !Ref PublicSubnetA
-              - !Ref PublicSubnetB
+        Ref: Subnets
+
 
 
 #-------------------------------Outputs----------------------------------
@@ -271,12 +279,12 @@ Outputs:
   Region:
     Description: "Current Region"
     Value: !Ref "AWS::Region"
-  LastAMI:
-   Description: "Last Amazon AMI"
-   Value: !Ref LatestAMIid
-  VPC:
-   Description: "Current VPC"
-   Value: !Ref VPC
-  EIP:
-   Description: "Allocation Id"
-   Value: !GetAtt EIP.AllocationId
+  # LastAMI:
+  #  Description: "Last Amazon AMI"
+  #  Value: !Ref LatestAMIid
+  # VPC:
+  #  Description: "Current VPC"
+  #  Value: !Ref VPC
+  # EIP:
+  #  Description: "Allocation Id"
+  #  Value: !GetAtt EIP.AllocationId
