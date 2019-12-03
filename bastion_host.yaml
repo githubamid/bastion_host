@@ -65,13 +65,16 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
      VpcId: !Ref VPC
+     GroupName : BHSecurityGroup
      GroupDescription: Enable SSH access via port 22
      SecurityGroupIngress:
        - IpProtocol: tcp
          FromPort: '22'
          ToPort: '22'
          CidrIp: 0.0.0.0/0
-
+     Tags:
+       - Key: Name
+         Value: !Sub ${EnvironmentName}-BHSecurityGroup
 
    #------------------IAM ROLE-------------------------------
   EC2Role:
@@ -88,6 +91,10 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Path: "/"
+      RoleName: BH-EC2Role
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-BH-Role
   Ec2Policy:
     Type: "AWS::IAM::Policy"
     Properties:
@@ -114,10 +121,14 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: VPC
+      Tags:
+      - Key: Name
+        Value: !Sub ${EnvironmentName}-BH-EIP
 
   AutoSGLaunchCF:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      LaunchConfigurationName: !Sub ${EnvironmentName}-BH-LaunchCF
       KeyName: !Ref KeyName
       ImageId: !Ref LatestAMIid
       UserData:
@@ -132,12 +143,12 @@ Resources:
         - !Ref BHSecurityGroup
       IamInstanceProfile: !Ref EC2Profile
       InstanceType: !Ref InstanceType
-#        LaunchConfigurationName: AutoSGLaunchCF
+
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: AutoSG for BastionHost
+      AutoScalingGroupName: !Sub ${EnvironmentName}-BH-ASG
       Cooldown: 60
       DesiredCapacity: 1
       LaunchConfigurationName: !Ref AutoSGLaunchCF
@@ -146,7 +157,7 @@ Resources:
       Tags:
         -
           Key: Name
-          Value: BastionHostASG
+          Value: !Sub ${EnvironmentName}-BastionHost
           PropagateAtLaunch: 'true'
       VPCZoneIdentifier:
         Ref: Subnets
