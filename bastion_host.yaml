@@ -23,6 +23,7 @@ Parameters:
   LatestAMIid:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: The latest ImageID alias
 
   KeyName:
    Type: 'AWS::EC2::KeyPair::KeyName'
@@ -169,12 +170,3 @@ Outputs:
   Region:
     Description: "Current Region"
     Value: !Ref "AWS::Region"
-  # LastAMI:
-  #  Description: "Last Amazon AMI"
-  #  Value: !Ref LatestAMIid
-  # VPC:
-  #  Description: "Current VPC"
-  #  Value: !Ref VPC
-  # EIP:
-  #  Description: "Allocation Id"
-  #  Value: !GetAtt EIP.AllocationId
